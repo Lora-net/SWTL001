@@ -50,7 +50,7 @@ This tool can be compiled with the following toolchains:
 
 ### Configure
 
-Before starting to build an example, check the firmware header file being included in the [main file](application/src/main.c).
+Before starting to build an example, check the firmware header file being included in the [main file](application/src/main.c), ``application/src/main.c``.
 
 ### Build
 
@@ -89,8 +89,10 @@ There are multiple ways to do it, among which:
 
 * Drag and drop the binary file to the USB drive listed by our OS - usually shows up as `NODE_L476RG`.
 * Load it through the Keil IDE
-* A tool like STM32 ST-Link Utility
+* A tool like [STM32 Cube Programmer](https://www.st.com/en/development-tools/stm32cubeprog.html)
 
+:warning: drag & drop binary file to NUCLEO USB storage device in windows is currently not functioning as of November 2023.  The microsoft patch is not generally available as of this date.  If copying binary file to NUCLEO USB storage does not function in windows, use the STM32CubeProgrammer.\
+USB mass storage works OK in other operating systems. :warning:
 ### Operations
 
 As soon as the binary is downloaded, the update process begins.
