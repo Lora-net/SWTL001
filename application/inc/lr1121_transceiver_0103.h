@@ -60,7 +60,7 @@
 /*!
  * \brief Firmware type
  */
-#define LR11XX_FIRMWARE_UPDATE_TO LR1110_FIRMWARE_UPDATE_TO_TRX
+#define LR11XX_FIRMWARE_UPDATE_TO LR1121_FIRMWARE_UPDATE_TO_TRX
 
 /*!
  * \brief Array containing the firmware image
