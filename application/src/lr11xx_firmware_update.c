@@ -43,6 +43,7 @@
 #include "lr11xx_system.h"
 #include "lr11xx_firmware_update.h"
 #include "lr1110_modem_lorawan.h"
+#include "lr1121_modem_modem.h"
 #include "system.h"
 #include <stdint.h>
 
@@ -170,7 +171,7 @@ lr11xx_fw_update_status_t lr11xx_update_firmware( void* radio, lr11xx_fw_update_
         }
         break;
     }
-    case LR1110_FIRMWARE_UPDATE_TO_MODEM:
+    case LR1110_FIRMWARE_UPDATE_TO_MODEM_V1:
     {
         lr1110_modem_version_t version_modem = { 0 };
 
@@ -182,7 +183,37 @@ lr11xx_fw_update_status_t lr11xx_update_firmware( void* radio, lr11xx_fw_update_
         printf( " - Chip firmware version   = 0x%08x\n", version_modem.firmware );
         printf( " - Chip LoRaWAN version    = 0x%04x\n", version_modem.lorawan );
 
-        uint32_t fw_version = ( ( uint32_t ) ( version_modem.functionality ) << 24 ) + version_modem.firmware;
+        uint32_t fw_version = ( ( uint32_t )( version_modem.functionality ) << 24 ) + version_modem.firmware;
+
+        if( fw_version == fw_expected )
+        {
+            return LR11XX_FW_UPDATE_OK;
+        }
+        else
+        {
+            return LR11XX_FW_UPDATE_ERROR;
+        }
+        break;
+    }
+    case LR1121_FIRMWARE_UPDATE_TO_MODEM_V2:
+    {
+        lr1121_modem_version_t version_modem = { 0 };
+
+        system_time_wait_ms( 2000 );
+
+        lr1121_modem_get_modem_version( radio, &version_modem );
+        printf( "Chip in LoRa Basics Modem-E mode:\n" );
+        printf( " - Chip use case version: 0x%02X\n", version_modem.use_case );
+        printf( " - Chip modem major version: 0x%02X\n", version_modem.modem_major );
+        printf( " - Chip modem minor version: 0x%02X\n", version_modem.modem_minor );
+        printf( " - Chip modem patch version: 0x%02X\n", version_modem.modem_patch );
+        printf( " - Chip lbm major version: 0x%02X\n", version_modem.lbm_major );
+        printf( " - Chip lbm minor version: 0x%02X\n", version_modem.lbm_minor );
+        printf( " - Chip lbm patch version: 0x%02X\n", version_modem.lbm_patch );
+
+        uint32_t fw_version =
+            ( ( uint32_t )( version_modem.use_case ) << 24 ) + ( ( uint32_t )( version_modem.modem_major ) << 16 ) +
+            ( ( uint32_t )( version_modem.modem_minor << 8 ) ) + ( uint32_t )( version_modem.modem_patch );
 
         if( fw_version == fw_expected )
         {
@@ -211,7 +242,7 @@ bool lr11xx_is_chip_in_production_mode( uint8_t type )
 
 bool lr11xx_is_fw_compatible_with_chip( lr11xx_fw_update_t update, uint16_t bootloader_version )
 {
-    if( ( ( update == LR1110_FIRMWARE_UPDATE_TO_TRX ) || ( update == LR1110_FIRMWARE_UPDATE_TO_MODEM ) ) &&
+    if( ( ( update == LR1110_FIRMWARE_UPDATE_TO_TRX ) || ( update == LR1110_FIRMWARE_UPDATE_TO_MODEM_V1 ) ) &&
         ( bootloader_version != 0x6500 ) )
     {
         return false;
@@ -220,7 +251,8 @@ bool lr11xx_is_fw_compatible_with_chip( lr11xx_fw_update_t update, uint16_t boot
     {
         return false;
     }
-    else if( ( update == LR1121_FIRMWARE_UPDATE_TO_TRX ) && ( bootloader_version != 0x2100 ) )
+    else if( ( ( update == LR1121_FIRMWARE_UPDATE_TO_TRX ) || ( update == LR1121_FIRMWARE_UPDATE_TO_MODEM_V2 ) ) &&
+             ( bootloader_version != 0x2100 ) )
     {
         return false;
     }

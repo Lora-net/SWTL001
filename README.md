@@ -50,13 +50,33 @@ This tool can be compiled with the following toolchains:
 
 ### Configure
 
-Before starting to build an example, check the firmware header file being included in the [main file](application/src/main.c), ``application/src/main.c``.
+Before starting to build an example, make sure to choose the proper firmware header file being included in the [main file](application/src/main.c), ``application/src/main.c``.
+
+The code comprises a define ``IMAGE_HEADER_FILE`` that is defined through the ``Makefile``.
+
+If you are using the Makefile you can __either__:
+
+* Define this by calling the make command with the proper value:
+
+    ```shell
+    make IMAGE_HEADER_FILE=lr1110_modem_1.1.9.h
+    ```
+
+* Define independantly the radio chip, the mode and the version as the make file will deduce the header to include from it:
+
+    ```shell
+    make RADIO=lr1110 RADIO_MODE=modem RADIO_VERSION=1.1.9
+    ```
+
+If you want to use the Keil project you need to change the definition of ``IMAGE_HEADER_FILE`` in the project properties
+
+In any case you can also simply modify directly the source file adding the desired include manually.
 
 ### Build
 
 #### Pre-compiled binaries
 
-Pre-compiled binaries are available [the Wiki](https://github.com/Lora-net/SWTL001/wiki/home).
+Pre-compiled binaries are available in [the Wiki](https://github.com/Lora-net/SWTL001/wiki/home).
 
 #### Keil MDK ARM
 
@@ -77,8 +97,8 @@ The output files of the build process are stored in the `build` folder with firm
 To build a project, simply run make:
 
 ```shell
-$ cd $LR11XX_UPDATER_TOOL_FOLDER
-$ make
+cd $LR11XX_UPDATER_TOOL_FOLDER
+make
 ```
 
 ### Load

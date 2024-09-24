@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v2.5.1] - 2024-09-23
+
+### Changed
+
+- LR1121 Modem-E dependency updated to release version
+
+### Fixed
+
+- Fix Keil compiling toolchain following LR1121 Modem-E driver addition
+
+## [v2.5.0] - 2024-09-20
+
+### Added
+
+- Support to flash Modem-E v2 on LR1121 chips
+- It is no longer useful to set LR11XX_FIRMWARE_IMAGE_SIZE in transceiver.h or modem.h file
+- Add programatic include to choose image to load
+- Rename the destination update names `LR1110_FIRMWARE_UPDATE_TO_MODEM_V1` and `LR1121_FIRMWARE_UPDATE_TO_MODEM_V2`
+
+### Removed
+
+- Remove the destination update `LR1120_FIRMWARE_UPDATE_TO_MODEM`
+
+## [2.4.0] - 2024-02-07
+
+### Added
+
+- Fimrware images
+  - LR1110 LoRa Basics Modem-E `1.1.8`
+  - LR1110 LoRa Basics Modem-E `1.1.9`
+
 ## [2.3.0] - 2023-12-12
 
 ### Changed

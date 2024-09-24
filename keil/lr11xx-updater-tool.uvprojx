@@ -337,9 +337,9 @@
             <v6Rtti>0</v6Rtti>
             <VariousControls>
               <MiscControls>-Wno-deprecated-register</MiscControls>
-              <Define>USE_FULL_LL_DRIVER, LV_CONF_INCLUDE_SIMPLE</Define>
+              <Define>USE_FULL_LL_DRIVER, LV_CONF_INCLUDE_SIMPLE, IMAGE_HEADER_FILE=\"lr1110_transceiver_0401.h\"</Define>
               <Undefine></Undefine>
-              <IncludePath>..\lr11xx_driver\src;..\external\STM32CubeL4\Drivers\STM32L4xx_HAL_Driver\Inc;..\external\STM32CubeL4\Drivers\STM32L4xx_HAL_Driver\Inc\Legacy;..\external\STM32CubeL4\Drivers\CMSIS\Core\Include;..\external\STM32CubeL4\Drivers\CMSIS\Device\ST\STM32L4xx\Include;..\application\inc;..\system\inc;..\display_touch\inc;..\external\lvgl;..\external\lvgl\src;..\external\lvgl\src\lv_core;..\external\lvgl\src\lv_draw;..\external\lvgl\src\lv_font;..\external\lvgl\src\lv_hal;..\external\lvgl\src\lv_misc;..\external\lvgl\src\lv_objx;..\external\lvgl\src\lv_themes;..\lr1110_modem_driver\src</IncludePath>
+              <IncludePath>..\lr11xx_driver\src;..\external\STM32CubeL4\Drivers\STM32L4xx_HAL_Driver\Inc;..\external\STM32CubeL4\Drivers\STM32L4xx_HAL_Driver\Inc\Legacy;..\external\STM32CubeL4\Drivers\CMSIS\Core\Include;..\external\STM32CubeL4\Drivers\CMSIS\Device\ST\STM32L4xx\Include;..\application\inc;..\system\inc;..\display_touch\inc;..\external\lvgl;..\external\lvgl\src;..\external\lvgl\src\lv_core;..\external\lvgl\src\lv_draw;..\external\lvgl\src\lv_font;..\external\lvgl\src\lv_hal;..\external\lvgl\src\lv_misc;..\external\lvgl\src\lv_objx;..\external\lvgl\src\lv_themes;..\lr1110_modem_driver\src;..\lr1121_modem_driver\src</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -407,6 +407,11 @@
               <FileName>lr1110_modem_hal.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\application\src\lr1110_modem_hal.c</FilePath>
+            </File>
+            <File>
+              <FileName>lr1121_modem_hal.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\application\src\lr1121_modem_hal.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -1022,6 +1027,16 @@
               <FileName>lr1110_modem_lorawan.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\lr1110_modem_driver\src\lr1110_modem_lorawan.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>lr1121_modem_driver</GroupName>
+          <Files>
+            <File>
+              <FileName>lr1121_modem_modem.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\lr1121_modem_driver\src\lr1121_modem_modem.c</FilePath>
             </File>
           </Files>
         </Group>

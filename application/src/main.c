@@ -37,7 +37,11 @@
  * --- DEPENDENCIES ------------------------------------------------------------
  */
 
-#include "lr1110_transceiver_0308.h"
+#if defined IMAGE_HEADER_FILE
+#include IMAGE_HEADER_FILE
+#else
+#error IMAGE_HEADER_FILE is not defined, please define it or include firmware image instead of this message
+#endif
 
 #include "configuration.h"
 #include "system.h"
@@ -123,9 +127,14 @@ int main( void )
         printf( "Update LR1121 to transceiver firmware 0x%04x\n", LR11XX_FIRMWARE_VERSION );
         break;
     }
-    case LR1110_FIRMWARE_UPDATE_TO_MODEM:
+    case LR1110_FIRMWARE_UPDATE_TO_MODEM_V1:
     {
         printf( "Update LR1110 to modem firmware 0x%06x\n", LR11XX_FIRMWARE_VERSION );
+        break;
+    }
+    case LR1121_FIRMWARE_UPDATE_TO_MODEM_V2:
+    {
+        printf( "Update LR1121 to modem firmware 0x%06x\n", LR11XX_FIRMWARE_VERSION );
         break;
     }
     }
@@ -138,9 +147,9 @@ int main( void )
         {
             system_gpio_set_pin_state( lr11xx_led_scan, SYSTEM_GPIO_PIN_STATE_HIGH );
 
-            const lr11xx_fw_update_status_t status =
-                lr11xx_update_firmware( &radio, LR11XX_FIRMWARE_UPDATE_TO, LR11XX_FIRMWARE_VERSION,
-                                        lr11xx_firmware_image, ( uint32_t ) LR11XX_FIRMWARE_IMAGE_SIZE );
+            const lr11xx_fw_update_status_t status = lr11xx_update_firmware(
+                &radio, LR11XX_FIRMWARE_UPDATE_TO, LR11XX_FIRMWARE_VERSION, lr11xx_firmware_image,
+                sizeof( lr11xx_firmware_image ) / sizeof( lr11xx_firmware_image[0] ) );
 
             system_gpio_set_pin_state( lr11xx_led_scan, SYSTEM_GPIO_PIN_STATE_LOW );
 

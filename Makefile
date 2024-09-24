@@ -13,8 +13,11 @@
 ######################################
 # target
 ######################################
+RADIO ?= lr1110
+RADIO_MODE ?= transceiver
+RADIO_VERSION ?= 0401
 UPDATER_TARGET = lr11xx-updater-tool
-
+IMAGE_HEADER_FILE ?= $(RADIO)_$(RADIO_MODE)_$(RADIO_VERSION).h
 
 ######################################
 # building variables
@@ -34,7 +37,7 @@ GIT_COMMIT  := $(shell git rev-parse --verify HEAD)
 GIT_DATE    := $(firstword $(shell git --no-pager show --date=iso-strict --format="%ad" --name-only))
 BUILD_DATE  := $(shell date --iso=seconds)
 
-UPDATER_TARGET_NAME = $(UPDATER_TARGET)_$(GIT_VERSION)
+UPDATER_TARGET_NAME = $(UPDATER_TARGET)_$(GIT_VERSION)_$(RADIO)_$(RADIO_MODE)_$(RADIO_VERSION)
 
 #######################################
 # paths
@@ -52,6 +55,7 @@ application/src/main.c \
 application/src/gui.c \
 application/src/lr11xx_hal.c \
 application/src/lr1110_modem_hal.c \
+application/src/lr1121_modem_hal.c \
 application/src/lr11xx_firmware_update.c \
 external/STM32CubeL4/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_spi.c \
 external/STM32CubeL4/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_tim.c \
@@ -75,6 +79,7 @@ system/src/system.c \
 lr11xx_driver/src/lr11xx_bootloader.c \
 lr11xx_driver/src/lr11xx_system.c \
 lr1110_modem_driver/src/lr1110_modem_lorawan.c \
+lr1121_modem_driver/src/lr1121_modem_modem.c \
 gcc/redirect.c \
 gcc/usart_redirect.c
 
@@ -138,8 +143,8 @@ C_DEFS =  \
 -DGIT_VERSION=\"$(GIT_VERSION)\" \
 -DGIT_COMMIT=\"$(GIT_COMMIT)\" \
 -DGIT_DATE=\"$(GIT_DATE)\" \
--DBUILD_DATE=\"$(BUILD_DATE)\"
-
+-DBUILD_DATE=\"$(BUILD_DATE)\" \
+-DIMAGE_HEADER_FILE=\"$(IMAGE_HEADER_FILE)\"
 
 # AS includes
 AS_INCLUDES = 
@@ -163,6 +168,7 @@ C_INCLUDES =  \
 -Isystem/inc \
 -Ilr11xx_driver/src \
 -Ilr1110_modem_driver/src \
+-Ilr1121_modem_driver/src \
 -Ihci \
 -Ihci/Command/Inc
 

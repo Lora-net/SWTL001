@@ -122,7 +122,7 @@ void gui_init( lr11xx_fw_update_t update, uint32_t fw_expected )
         sprintf( buffer, "Update LR1110 to FW 0x%04x", fw_expected );
         break;
     }
-    case LR1110_FIRMWARE_UPDATE_TO_MODEM:
+    case LR1110_FIRMWARE_UPDATE_TO_MODEM_V1:
     {
         sprintf( buffer, "Update Modem-E to FW 0x%06x", fw_expected );
         break;
@@ -137,6 +137,13 @@ void gui_init( lr11xx_fw_update_t update, uint32_t fw_expected )
         sprintf( buffer, "Update LR1121 to FW 0x%04x", fw_expected );
         break;
     }
+    case LR1121_FIRMWARE_UPDATE_TO_MODEM_V2:
+    {
+        sprintf( buffer, "Update Modem-E to FW 0x%06x", fw_expected );
+        break;
+    }
+    default:
+    break;
     }
 
     lv_obj_t* lbl_fw = lv_label_create( screen, NULL );

@@ -1,10 +1,10 @@
 /*!
- * @file      version.h
+ * @file      lr1121_modem_driver_version.h
  *
- * @brief     Version definition
+ * @brief     Placeholder to keep the version of LR1121 driver.
  *
  * The Clear BSD License
- * Copyright Semtech Corporation 2021. All rights reserved.
+ * Copyright Semtech Corporation 2024. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted (subject to the limitations in the disclaimer
@@ -32,61 +32,25 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef VERSION_H
-#define VERSION_H
+#ifndef LR1121_MODEM_DRIVER_VERSION_H
+#define LR1121_MODEM_DRIVER_VERSION_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/*
- * -----------------------------------------------------------------------------
- * --- DEPENDENCIES ------------------------------------------------------------
+/**
+ * @brief Version of the driver
  */
+#define LR1121_MODEM_DRIVER_VERSION "v1.0.0"
 
-#include "lr11xx_system_types.h"
-
-#ifndef DEMO_VERSION
-#warning "No demo version provided"
-#define DEMO_VERSION "v2.5.1"
-#endif
-
-/*
- * -----------------------------------------------------------------------------
- * --- PUBLIC MACROS -----------------------------------------------------------
+/**
+ * @brief Returns version string
  */
-
-/*
- * -----------------------------------------------------------------------------
- * --- PUBLIC CONSTANTS --------------------------------------------------------
- */
-
-/*
- * -----------------------------------------------------------------------------
- * --- PUBLIC TYPES ------------------------------------------------------------
- */
-
-typedef struct
-{
-    char                version_sw[10];
-    char                version_driver[10];
-    uint8_t             version_chip_type;
-    uint8_t             version_chip_hw;
-    uint16_t            version_chip_fw;
-    lr11xx_system_uid_t chip_uid;
-    uint16_t            almanac_date;
-    uint32_t            almanac_crc;
-} version_handler_t;
-
-/*
- * -----------------------------------------------------------------------------
- * --- PUBLIC FUNCTIONS PROTOTYPES ---------------------------------------------
- */
+const char* lr1121_modem_driver_version_get_version_string( void );
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // VERSION_H
-
-/* --- EOF ------------------------------------------------------------------ */
+#endif  // LR1121_MODEM_DRIVER_VERSION_H
