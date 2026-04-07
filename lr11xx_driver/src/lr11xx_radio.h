@@ -286,6 +286,33 @@ lr11xx_status_t lr11xx_radio_set_lora_public_network( const void*               
 lr11xx_status_t lr11xx_radio_set_rx( const void* context, const uint32_t timeout_in_ms );
 
 /*!
+ * @brief Start RX operations with a timeout in millisecond and configure the LNA LF0 mode
+ *
+ * This command sets the LR11XX to RX mode and configures the LNA LF0 mode. The radio must have been configured before
+ * using this command with @ref lr11xx_radio_set_pkt_type
+ *
+ * This command must be issued only for sub-GHz RX operations as it configures the LNA LF0, which is only used for
+ * sub-GHz Rx operations.
+ *
+ * By default, the timeout parameter allows to return automatically to standby RC mode if no packets have been received
+ * after a certain amount of time. This behavior can be altered by @ref lr11xx_radio_set_rx_tx_fallback_mode and @ref
+ * lr11xx_radio_auto_tx_rx.
+ *
+ * @remark To set the radio in Rx continuous mode, the function @ref lr11xx_radio_set_rx_with_timeout_in_rtc_step has to
+ * be called with \p timeout_in_rtc_step set to 0xFFFFFF
+ *
+ * @param [in] context Chip implementation context
+ * @param [in] timeout_in_ms The timeout configuration for RX operation
+ * @param [in] lna_mode Path to use for reception
+ *
+ * @returns Operation status
+ *
+ * @see lr11xx_radio_set_pkt_type, lr11xx_radio_set_rx_tx_fallback_mode, lr11xx_radio_set_lna_mode
+ */
+lr11xx_status_t lr11xx_radio_set_rx_and_lna_mode( const void* context, const uint32_t timeout_in_ms,
+                                                  lr11xx_radio_lna_mode_t lna_mode );
+
+/*!
  * @brief Start RX operations with a timeout in RTC step
  *
  * This command sets the LR11XX to RX mode. The radio must have been configured before using this command with @ref
@@ -317,6 +344,44 @@ lr11xx_status_t lr11xx_radio_set_rx( const void* context, const uint32_t timeout
  * @see lr11xx_radio_set_pkt_type, lr11xx_radio_set_rx_tx_fallback_mode
  */
 lr11xx_status_t lr11xx_radio_set_rx_with_timeout_in_rtc_step( const void* context, const uint32_t timeout_in_rtc_step );
+
+/*!
+ * @brief Start RX operations with a timeout in RTC step and configure the LNA LF0 mode
+ *
+ * This command sets the LR11XX to RX mode and configures the LNA LF0 mode. The radio must have been configured before
+ * using this command with @ref lr11xx_radio_set_pkt_type It internally calls lr11xx_radio_set_lna_mode. This command
+ * must be issued only for sub-GHz RX operations as it configures the LNA LF0, which is only used for sub-GHz Rx
+ * operations.
+ *
+ * By default, the timeout parameter allows to return automatically to standby RC mode if no packets have been received
+ * after a certain amount of time. This behavior can be altered by @ref lr11xx_radio_set_rx_tx_fallback_mode and @ref
+ * lr11xx_radio_auto_tx_rx.
+ *
+ * The timeout duration is obtained by:
+ * \f$ timeout\_duration\_ms = timeout \times \frac{1}{32.768} \f$
+ *
+ * Maximal timeout value is 0xFFFFFF, which gives a maximal timeout of 511 seconds.
+ *
+ * The timeout argument can also have the following special values:
+ * <table>
+ * <tr><th> Special values </th><th> Meaning </th>
+ * <tr><td> 0x000000 </td><td> RX single: LR11XX stays in RX mode until a
+ * packet is received, then switch to standby RC mode <tr><td> 0xFFFFFF
+ * </td><td> RX continuous: LR11XX stays in RX mode even after reception of a
+ * packet
+ * </table>
+ *
+ * @param [in] context Chip implementation context
+ * @param [in] timeout_in_rtc_step The timeout configuration for RX operation
+ * @param [in] lna_mode Path to use for reception
+ *
+ * @returns Operation status
+ *
+ * @see lr11xx_radio_set_pkt_type, lr11xx_radio_set_rx_tx_fallback_mode
+ */
+lr11xx_status_t lr11xx_radio_set_rx_with_timeout_in_rtc_step_and_lna_mode( const void*             context,
+                                                                           const uint32_t          timeout_in_rtc_step,
+                                                                           lr11xx_radio_lna_mode_t lna_mode );
 
 /*!
  * @brief Start TX operations
@@ -430,12 +495,17 @@ lr11xx_status_t lr11xx_radio_set_pkt_type( const void* context, const lr11xx_rad
  *
  * The command @ref lr11xx_radio_set_pkt_type must be called prior this one.
  *
+ * Depending on the modulation to configure, workarounds may applies.
+ * Refer to @ref lr11xx_workaround_gfsk_1_2_kbps, @ref lr11xx_workaround_gfsk_0_6_kbps_sub_ghz, @ref
+ * lr11xx_workaround_gfsk_0_6_kbps_ghz, @ref lr11xx_workaround_gfsk_reset.
+ *
  * @param [in] context Chip implementation context
  * @param [in] mod_params The structure of modulation configuration
  *
  * @returns Operation status
  *
- * @see lr11xx_radio_set_pkt_type
+ * @see lr11xx_radio_set_pkt_type, lr11xx_workaround_gfsk_1_2_kbps, lr11xx_workaround_gfsk_0_6_kbps_sub_ghz,
+ * lr11xx_workaround_gfsk_0_6_kbps_ghz, lr11xx_workaround_gfsk_reset
  */
 lr11xx_status_t lr11xx_radio_set_gfsk_mod_params( const void*                           context,
                                                   const lr11xx_radio_mod_params_gfsk_t* mod_params );
@@ -812,7 +882,7 @@ uint32_t lr11xx_radio_get_lora_bw_in_hz( lr11xx_radio_lora_bw_t bw );
  * @param [in] pkt_p Pointer to a structure holding the LoRa packet parameters
  * @param [in] mod_p Pointer to a structure holding the LoRa modulation parameters
  *
- * @returns Time-on-air value in ms for LoRa transmission
+ * @returns Time-on-air value in ms for LoRa transmission or 0 if the LoRa bandwidth is not known
  */
 uint32_t lr11xx_radio_get_lora_time_on_air_in_ms( const lr11xx_radio_pkt_params_lora_t* pkt_p,
                                                   const lr11xx_radio_mod_params_lora_t* mod_p );
@@ -953,6 +1023,91 @@ lr11xx_status_t lr11xx_radio_apply_high_acp_workaround( const void* context );
  * nb_of_symb = mant * 2 ^ (2 * exp + 1)
  */
 uint16_t lr11xx_radio_convert_nb_symb_to_mant_exp( const uint16_t nb_symbol, uint8_t* mant, uint8_t* exp );
+
+/**
+ * @brief Configure LNA LF0 mode
+ *
+ * @remark This function shall be called after each call to lr11xx_radio_set_rx or
+ * lr11xx_radio_set_rx_with_timeout_in_rtc_step to be taken into account. Helper functions
+ * lr11xx_radio_set_rx_on_lna_path or lr11xx_radio_set_rx_with_timeout_in_rtc_step_on_lna_path can be used instead.
+ *
+ * @param [in] context Chip implementation context
+ * @param [in] lna_mode Value to put in the register, enum type
+ *
+ * @returns Operation status
+ *
+ * @see lr11xx_radio_set_rx_on_lna_path, lr11xx_radio_set_rx_with_timeout_in_rtc_step_on_lna_path
+ */
+lr11xx_status_t lr11xx_radio_set_lna_mode( const void* context, lr11xx_radio_lna_mode_t lna_mode );
+
+/**
+ * @brief Apply GFSK workaround for GFSK 1.2 kbps
+ *
+ * This workaround is to be applied after calling @ref lr11xx_radio_set_gfsk_mod_params and @ref
+ * lr11xx_radio_set_gfsk_pkt_params if an only if:
+ *  - lr11xx_mod_params_gfsk_s.br_in_bps = 1200 bps; and
+ *  - lr11xx_mod_params_gfsk_s.fdev_in_hz = 5000 Hz; and
+ *  - lr11xx_mod_params_gfsk_s.bw_dsb_param = @ref LR11XX_RADIO_GFSK_BW_19500
+ *
+ * @param [in] context Chip implementation context
+ *
+ * @return Operation status
+ *
+ * @see lr11xx_radio_set_gfsk_mod_params, lr11xx_radio_set_gfsk_pkt_params, lr11xx_workaround_gfsk_reset
+ */
+lr11xx_status_t lr11xx_workaround_gfsk_1_2_kbps( const void* context );
+
+/**
+ * @brief Apply GFSK workaround for GFSK 0.6 kbps on sub-ghz path
+ *
+ * This workaround is to be applied after calling @ref lr11xx_radio_set_gfsk_mod_params and @ref
+ * lr11xx_radio_set_gfsk_pkt_params if an only if:
+ *  - lr11xx_mod_params_gfsk_s.br_in_bps = 600 bps; and
+ *  - lr11xx_mod_params_gfsk_s.fdev_in_hz = 800 Hz; and
+ *  - lr11xx_mod_params_gfsk_s.bw_dsb_param = @ref LR11XX_RADIO_GFSK_BW_4800; and
+ *  - for sub-ghz operations
+ *
+ * @param [in] context Chip implementation context
+ *
+ * @return Operation status
+ *
+ * @see lr11xx_radio_set_gfsk_mod_params, lr11xx_radio_set_gfsk_pkt_params, lr11xx_workaround_gfsk_reset
+ */
+lr11xx_status_t lr11xx_workaround_gfsk_0_6_kbps_sub_ghz( const void* context );
+
+/**
+ * @brief Apply GFSK workaround for GFSK 1.2 kbps on Ghz path
+ *
+ * This workaround is to be applied after calling @ref lr11xx_radio_set_gfsk_mod_params and @ref
+ * lr11xx_radio_set_gfsk_pkt_params if an only if:
+ *  - lr11xx_mod_params_gfsk_s.br_in_bps = 600 bps; and
+ *  - lr11xx_mod_params_gfsk_s.fdev_in_hz = 800 Hz; and
+ *  - lr11xx_mod_params_gfsk_s.bw_dsb_param = @ref LR11XX_RADIO_GFSK_BW_4800; and
+ *  - for above GHz operations
+ *
+ * @param [in] context Chip implementation context
+ *
+ * @return Operation status
+ *
+ * @see lr11xx_radio_set_gfsk_mod_params, lr11xx_radio_set_gfsk_pkt_params, lr11xx_workaround_gfsk_reset
+ */
+lr11xx_status_t lr11xx_workaround_gfsk_0_6_kbps_ghz( const void* context );
+
+/**
+ * @brief Reset workaround applied by @ref lr11xx_workaround_gfsk_1_2_kbps or lr11xx_workaround_gfsk_0_6_kbps_sub_ghz or
+ * @ref lr11xx_workaround_gfsk_0_6_kbps_ghz
+ *
+ * This workaround reset must be called before attempting to configure a modulation different from the one specified in
+ * @ref lr11xx_workaround_gfsk_0_6_kbps_sub_ghz or @ref lr11xx_workaround_gfsk_0_6_kbps_ghz or @ref
+ * lr11xx_workaround_gfsk_1_2_kbps.
+ *
+ * @param [in] context Chip implementation context
+ *
+ * @return Operation status
+ *
+ * @see lr11xx_workaround_gfsk_1_2_kbps, lr11xx_workaround_gfsk_0_6_kbps_sub_ghz, lr11xx_workaround_gfsk_0_6_kbps_ghz
+ */
+lr11xx_status_t lr11xx_workaround_gfsk_reset( const void* context );
 
 #ifdef __cplusplus
 }

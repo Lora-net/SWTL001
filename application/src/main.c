@@ -52,6 +52,7 @@
 #include "lv_port_disp.h"
 #include "gui.h"
 #include "version.h"
+#include "conditional_bootloader_handling.h"
 
 /*
  * -----------------------------------------------------------------------------
@@ -62,6 +63,12 @@
  * -----------------------------------------------------------------------------
  * --- PRIVATE CONSTANTS -------------------------------------------------------
  */
+
+#ifdef HAS_BOOTLOADER
+static const bool has_bootloader = true;
+#else
+static const bool has_bootloader = false;
+#endif  // HAS_BOOTLOADER
 
 /*
  * -----------------------------------------------------------------------------
@@ -106,9 +113,9 @@ int main( void )
     lv_init( );
     lv_port_disp_init( );
 
-    printf( "LR11XX updater tool %s\n", DEMO_VERSION );
+    printf( "LR11XX updater tool %s%s\n", UPDATER_TOOL_VERSION, has_bootloader ? " with bootloader" : "" );
 
-    gui_init( LR11XX_FIRMWARE_UPDATE_TO, LR11XX_FIRMWARE_VERSION );
+    gui_init( LR11XX_FIRMWARE_UPDATE_TO, LR11XX_FIRMWARE_VERSION, has_bootloader );
 
     switch( LR11XX_FIRMWARE_UPDATE_TO )
     {
@@ -137,6 +144,14 @@ int main( void )
         printf( "Update LR1121 to modem firmware 0x%06x\n", LR11XX_FIRMWARE_VERSION );
         break;
     }
+    case LR1110_FIRMWARE_UPDATE_TO_BL_LOADER:
+    case LR1120_FIRMWARE_UPDATE_TO_BL_LOADER:
+    case LR1121_FIRMWARE_UPDATE_TO_BL_LOADER:
+    {
+        printf( "Direct usage of bootloader loader should not be attempted. Aborting.\n" );
+        gui_update( "ERROR\nDirect update to bootloader loader should not be attempted.\nAborting." );
+        return 1;
+    }
     }
 
     while( 1 )
@@ -147,30 +162,68 @@ int main( void )
         {
             system_gpio_set_pin_state( lr11xx_led_scan, SYSTEM_GPIO_PIN_STATE_HIGH );
 
-            const lr11xx_fw_update_status_t status = lr11xx_update_firmware(
-                &radio, LR11XX_FIRMWARE_UPDATE_TO, LR11XX_FIRMWARE_VERSION, lr11xx_firmware_image,
-                sizeof( lr11xx_firmware_image ) / sizeof( lr11xx_firmware_image[0] ) );
+            // Reset the radio to bootloader
+            lr11xx_reset_to_bootloader( &radio );
+
+            const bool bootloader_updated = CONDITIONALLY_HANDLE_BOOTLOADER( &radio );
+
+            lr11xx_fw_update_status_t status = LR11XX_FW_UPDATE_ERROR;
+            if( bootloader_updated == true )
+            {
+                const lr11xx_fw_update_status_t update_status = lr11xx_update_firmware(
+                    &radio, LR11XX_FIRMWARE_UPDATE_TO, LR11XX_FIRMWARE_VERSION, lr11xx_firmware_image,
+                    sizeof( lr11xx_firmware_image ) / sizeof( lr11xx_firmware_image[0] ) );
+
+                if( update_status == LR11XX_FW_UPDATE_OK )
+                {
+                    // Update went well: proceed with post flash verification and set status
+                    status = lr11xx_update_post_flash_reboot_and_verification( &radio, LR11XX_FIRMWARE_UPDATE_TO,
+                                                                               LR11XX_FIRMWARE_VERSION );
+                }
+                else
+                {
+                    // Update went incorrect: copy status to update status and propagate for status reporting
+                    status = update_status;
+                }
+            }
+            else
+            {
+                status = LR11XX_FW_UPDATE_BOOTLOADER_FAILED;
+            }
 
             system_gpio_set_pin_state( lr11xx_led_scan, SYSTEM_GPIO_PIN_STATE_LOW );
 
             switch( status )
             {
             case LR11XX_FW_UPDATE_OK:
+            {
                 system_gpio_set_pin_state( lr11xx_led_rx, SYSTEM_GPIO_PIN_STATE_HIGH );
                 gui_update( "UPDATE DONE!\nPlease flash another application\n(like EVK Demo App)" );
                 printf( "Expected firmware running!\n" );
                 printf( "Please flash another application (like EVK Demo App).\n" );
                 break;
+            }
             case LR11XX_FW_UPDATE_WRONG_CHIP_TYPE:
+            {
                 system_gpio_set_pin_state( lr11xx_led_tx, SYSTEM_GPIO_PIN_STATE_HIGH );
                 gui_update( "WRONG CHIP TYPE" );
                 printf( "Wrong chip type!\n" );
                 break;
+            }
             case LR11XX_FW_UPDATE_ERROR:
+            {
                 system_gpio_set_pin_state( lr11xx_led_tx, SYSTEM_GPIO_PIN_STATE_HIGH );
                 gui_update( "ERROR\nWrong firmware version\nPlease retry" );
                 printf( "Error! Wrong firmware version - please retry.\n" );
                 break;
+            }
+            case LR11XX_FW_UPDATE_BOOTLOADER_FAILED:
+            {
+                system_gpio_set_pin_state( lr11xx_led_tx, SYSTEM_GPIO_PIN_STATE_HIGH );
+                gui_update( "ERROR\nBootloader update failed" );
+                printf( "Error! Bootloader update failed.\n" );
+                break;
+            }
             }
 
             is_updated = true;

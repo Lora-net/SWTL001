@@ -69,19 +69,6 @@ extern "C" {
  */
 
 /*!
- * @brief Select the crypto element to be used
- *
- * By default, the internal crypto engine is selected. It is not needed to call this command if one plans to use the
- * internal crypto engine.
- *
- * @param [in] context Chip implementation context
- * @param [in] element The type of crypto element to use
- *
- * @returns Operation status
- */
-lr11xx_status_t lr11xx_crypto_select( const void* context, const lr11xx_crypto_element_t element );
-
-/*!
  * @brief Set a key in the previously selected crypto element.
  *
  * @param [in] context Chip implementation context
@@ -123,7 +110,7 @@ lr11xx_status_t lr11xx_crypto_derive_key( const void* context, lr11xx_crypto_sta
  * @param [in] lorawan_version LoRaWAN version to know the size of the header
  * @param [in] header The header to compute (length linked to lorawan_version)
  * @param [in] data The data to compute
- * @param [in] length The length in bytes of the data to compute
+ * @param [in] length The length in bytes of the data to compute, must be less than 32 bytes
  * @param [out] data_out Placeholder for the decrypted data
  *
  * @returns Operation status

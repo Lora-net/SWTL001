@@ -15,9 +15,12 @@
 ######################################
 RADIO ?= lr1110
 RADIO_MODE ?= transceiver
-RADIO_VERSION ?= 0401
+RADIO_VERSION ?= 0402
 UPDATER_TARGET = lr11xx-updater-tool
 IMAGE_HEADER_FILE ?= $(RADIO)_$(RADIO_MODE)_$(RADIO_VERSION).h
+
+# Uncomment the following, or define DISABLE_BOOTLOADER to remove bootloader update inclusion
+# DISABLE_BOOTLOADER=
 
 ######################################
 # building variables
@@ -37,7 +40,7 @@ GIT_COMMIT  := $(shell git rev-parse --verify HEAD)
 GIT_DATE    := $(firstword $(shell git --no-pager show --date=iso-strict --format="%ad" --name-only))
 BUILD_DATE  := $(shell date --iso=seconds)
 
-UPDATER_TARGET_NAME = $(UPDATER_TARGET)_$(GIT_VERSION)_$(RADIO)_$(RADIO_MODE)_$(RADIO_VERSION)
+UPDATER_TARGET_NAME := $(UPDATER_TARGET)_$(GIT_VERSION)_$(RADIO)_$(RADIO_MODE)_$(RADIO_VERSION)
 
 #######################################
 # paths
@@ -54,9 +57,9 @@ C_SOURCES =  \
 application/src/main.c \
 application/src/gui.c \
 application/src/lr11xx_hal.c \
-application/src/lr1110_modem_hal.c \
-application/src/lr1121_modem_hal.c \
+application/src/modem_e_modem_hal.c \
 application/src/lr11xx_firmware_update.c \
+application/src/lr11xx_update_utils.c \
 external/STM32CubeL4/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_spi.c \
 external/STM32CubeL4/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_tim.c \
 external/STM32CubeL4/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_usart.c \
@@ -78,8 +81,7 @@ system/src/system_time.c \
 system/src/system.c \
 lr11xx_driver/src/lr11xx_bootloader.c \
 lr11xx_driver/src/lr11xx_system.c \
-lr1110_modem_driver/src/lr1110_modem_lorawan.c \
-lr1121_modem_driver/src/lr1121_modem_modem.c \
+modem_e_driver/src/modem_e_modem.c \
 gcc/redirect.c \
 gcc/usart_redirect.c
 
@@ -144,7 +146,8 @@ C_DEFS =  \
 -DGIT_COMMIT=\"$(GIT_COMMIT)\" \
 -DGIT_DATE=\"$(GIT_DATE)\" \
 -DBUILD_DATE=\"$(BUILD_DATE)\" \
--DIMAGE_HEADER_FILE=\"$(IMAGE_HEADER_FILE)\"
+-DIMAGE_HEADER_FILE=\"$(IMAGE_HEADER_FILE)\" \
+-DUPDATER_TOOL_VERSION=\"$(GIT_VERSION)\"
 
 # AS includes
 AS_INCLUDES = 
@@ -167,30 +170,34 @@ C_INCLUDES =  \
 -Iexternal/lvgl/src \
 -Isystem/inc \
 -Ilr11xx_driver/src \
--Ilr1110_modem_driver/src \
--Ilr1121_modem_driver/src \
+-Imodem_e_driver/src \
 -Ihci \
 -Ihci/Command/Inc
 
 # compile gcc flags
 ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
-
+CPPFLAGS = $(MCU) $(C_DEFS) $(C_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections -std=c++11
 CFLAGS = $(MCU) $(C_DEFS) $(C_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections -std=c99
 
 ifeq ($(DEBUG), 1)
 CFLAGS += -g -gdwarf-2
-endif
-
-CPPFLAGS = $(MCU) $(C_DEFS) $(C_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections -std=c++11
-ifeq ($(DEBUG), 1)
 CPPFLAGS += -g -gdwarf-2
 endif
-
 
 # Generate dependency information
 CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
 CPPFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
 
+
+###################
+# Add bootloader
+###################
+ifndef DISABLE_BOOTLOADER
+include bootloader.mk
+C_SOURCES += $(BOOTLOADER_UPDATER_C_SOURCES)
+C_INCLUDES += $(BOOTLOADER_UPDATER_C_INCLUDES)
+C_DEFS += $(BOOTLOADER_UPDATER_C_DEFS)
+endif
 
 #######################################
 # LDFLAGS

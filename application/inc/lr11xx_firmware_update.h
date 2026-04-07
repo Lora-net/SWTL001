@@ -45,6 +45,7 @@ extern "C" {
  */
 
 #include <stdint.h>
+#include "lr11xx_types.h"
 
 /*
  * -----------------------------------------------------------------------------
@@ -68,13 +69,17 @@ typedef enum
     LR1120_FIRMWARE_UPDATE_TO_TRX,
     LR1121_FIRMWARE_UPDATE_TO_TRX,
     LR1121_FIRMWARE_UPDATE_TO_MODEM_V2,
+    LR1110_FIRMWARE_UPDATE_TO_BL_LOADER,
+    LR1120_FIRMWARE_UPDATE_TO_BL_LOADER,
+    LR1121_FIRMWARE_UPDATE_TO_BL_LOADER,
 } lr11xx_fw_update_t;
 
 typedef enum
 {
-    LR11XX_FW_UPDATE_OK              = 0,
-    LR11XX_FW_UPDATE_WRONG_CHIP_TYPE = 1,
-    LR11XX_FW_UPDATE_ERROR           = 2,
+    LR11XX_FW_UPDATE_OK                = 0,
+    LR11XX_FW_UPDATE_WRONG_CHIP_TYPE   = 1,
+    LR11XX_FW_UPDATE_ERROR             = 2,
+    LR11XX_FW_UPDATE_BOOTLOADER_FAILED = 3,
 } lr11xx_fw_update_status_t;
 
 /*
@@ -82,8 +87,41 @@ typedef enum
  * --- PUBLIC FUNCTIONS PROTOTYPES ---------------------------------------------
  */
 
+/**
+ * @brief Reset LR11xx chip to bootloader mode
+ *
+ * @param radio Chip implementation context
+ * @return Status of the operation
+ */
+lr11xx_status_t lr11xx_reset_to_bootloader( void* radio );
+
+/**
+ * @brief Update a firmware into LR11xx chip
+ *
+ * @note The LR11xx must have already been reset to bootloader with @ref lr11xx_reset_to_bootloader prior calling this
+ * function.
+ *
+ * @param radio Chip implementation context
+ * @param fw_update_direction Firmware direction of the firmware code
+ * @param fw_expected Expected firmware version after update
+ * @param buffer Firmware code to update
+ * @param length Length of @p buffer in word
+ * @return Status of the firmware update operation
+ */
 lr11xx_fw_update_status_t lr11xx_update_firmware( void* radio, lr11xx_fw_update_t fw_update_direction,
                                                   uint32_t fw_expected, const uint32_t* buffer, uint32_t length );
+
+/**
+ * @brief
+ *
+ * @param radio Chip implementation context
+ * @param fw_update_direction Firmware direction of the firmware code
+ * @param fw_expected Expected firmware version after update
+ * @return Status of the firmware update operation
+ */
+lr11xx_fw_update_status_t lr11xx_update_post_flash_reboot_and_verification( void*              radio,
+                                                                            lr11xx_fw_update_t fw_update_direction,
+                                                                            uint32_t           fw_expected );
 
 #ifdef __cplusplus
 }

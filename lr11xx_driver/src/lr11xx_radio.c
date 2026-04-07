@@ -107,6 +107,21 @@
  */
 #define LR11XX_RTC_FREQ_IN_HZ 32768UL
 
+/**
+ * @brief Register to apply GFSK workaround
+ */
+#define LR11XX_REG_GFSK_WORKAROUND_1 ( 0x00f20344 )
+
+/**
+ * @brief Register to apply GFSK workaround
+ */
+#define LR11XX_REG_GFSK_WORKAROUND_2 ( 0x00f20348 )
+
+/**
+ * @brief Register to apply GFSK workaround
+ */
+#define LR11XX_REG_GFSK_WORKAROUND_3 ( 0x00f20244 )
+
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE TYPES -----------------------------------------------------------
@@ -172,6 +187,8 @@ enum
  * @returns CRC length in byte
  */
 static inline uint32_t lr11xx_radio_get_gfsk_crc_len_in_bytes( lr11xx_radio_gfsk_crc_type_t crc_type );
+
+static lr11xx_status_t lr11xx_workaround_gfsk_0_6_kbps_base( const void* context, uint32_t value );
 
 /*
  * -----------------------------------------------------------------------------
@@ -409,7 +426,22 @@ lr11xx_status_t lr11xx_radio_set_rx( const void* context, const uint32_t timeout
     return lr11xx_radio_set_rx_with_timeout_in_rtc_step( context, timeout_in_rtc_step );
 }
 
-lr11xx_status_t lr11xx_radio_set_rx_with_timeout_in_rtc_step( const void* context, const uint32_t timeout )
+lr11xx_status_t lr11xx_radio_set_rx_and_lna_mode( const void* context, const uint32_t timeout_in_ms,
+                                                  lr11xx_radio_lna_mode_t lna_mode )
+{
+    const uint32_t timeout_in_rtc_step = lr11xx_radio_convert_time_in_ms_to_rtc_step( timeout_in_ms );
+
+    return lr11xx_radio_set_rx_with_timeout_in_rtc_step_and_lna_mode( context, timeout_in_rtc_step, lna_mode );
+}
+
+lr11xx_status_t lr11xx_radio_set_rx_with_timeout_in_rtc_step( const void* context, const uint32_t timeout_in_ms )
+{
+    return lr11xx_radio_set_rx_with_timeout_in_rtc_step_and_lna_mode( context, timeout_in_ms,
+                                                                      LR11XX_RADIO_LNA_MODE_DIFFERENTIAL_LF0 );
+}
+
+lr11xx_status_t lr11xx_radio_set_rx_with_timeout_in_rtc_step_and_lna_mode( const void* context, const uint32_t timeout,
+                                                                           lr11xx_radio_lna_mode_t lna_mode )
 {
     lr11xx_status_t status                                  = LR11XX_STATUS_ERROR;
     const uint8_t   cbuffer[LR11XX_RADIO_SET_RX_CMD_LENGTH] = {
@@ -433,6 +465,17 @@ lr11xx_status_t lr11xx_radio_set_rx_with_timeout_in_rtc_step( const void* contex
         {
             break;
         }
+
+        if( ( lna_mode == LR11XX_RADIO_LNA_MODE_SINGLE_RFI_P_LF0 ) ||
+            ( lna_mode == LR11XX_RADIO_LNA_MODE_SINGLE_RFI_N_LF0 ) )
+        {
+            status = lr11xx_radio_set_lna_mode( context, lna_mode );
+            if( status != LR11XX_STATUS_OK )
+            {
+                break;
+            }
+        }
+
     } while( 0 );
 
     return status;
@@ -917,11 +960,11 @@ lr11xx_status_t lr11xx_radio_set_rssi_calibration( const void*                  
         ( uint8_t ) ( ( ( rssi_cal_table->gain_tune.g11 & 0x0F ) << 4 ) + ( rssi_cal_table->gain_tune.g10 & 0x0F ) ),
         ( uint8_t ) ( ( ( rssi_cal_table->gain_tune.g13 & 0x0F ) << 4 ) + ( rssi_cal_table->gain_tune.g12 & 0x0F ) ),
         ( uint8_t ) ( ( ( rssi_cal_table->gain_tune.g13hp2 & 0x0F ) << 4 ) +
-                      ( rssi_cal_table->gain_tune.g13hp1 & 0x0F ) ),
+                     ( rssi_cal_table->gain_tune.g13hp1 & 0x0F ) ),
         ( uint8_t ) ( ( ( rssi_cal_table->gain_tune.g13hp4 & 0x0F ) << 4 ) +
-                      ( rssi_cal_table->gain_tune.g13hp3 & 0x0F ) ),
+                     ( rssi_cal_table->gain_tune.g13hp3 & 0x0F ) ),
         ( uint8_t ) ( ( ( rssi_cal_table->gain_tune.g13hp6 & 0x0F ) << 4 ) +
-                      ( rssi_cal_table->gain_tune.g13hp5 & 0x0F ) ),
+                     ( rssi_cal_table->gain_tune.g13hp5 & 0x0F ) ),
         ( uint8_t ) ( rssi_cal_table->gain_tune.g13hp7 & 0x0F ),
         ( uint8_t ) ( rssi_cal_table->gain_offset >> 8 ),
         ( uint8_t ) ( rssi_cal_table->gain_offset >> 0 ),
@@ -1165,10 +1208,17 @@ uint32_t lr11xx_radio_get_lora_bw_in_hz( lr11xx_radio_lora_bw_t bw )
 uint32_t lr11xx_radio_get_lora_time_on_air_in_ms( const lr11xx_radio_pkt_params_lora_t* pkt_p,
                                                   const lr11xx_radio_mod_params_lora_t* mod_p )
 {
-    uint32_t numerator   = 1000U * lr11xx_radio_get_lora_time_on_air_numerator( pkt_p, mod_p );
-    uint32_t denominator = lr11xx_radio_get_lora_bw_in_hz( mod_p->bw );
-    // Perform integral ceil()
-    return ( numerator + denominator - 1 ) / denominator;
+    const uint32_t numerator   = 1000U * lr11xx_radio_get_lora_time_on_air_numerator( pkt_p, mod_p );
+    const uint32_t denominator = lr11xx_radio_get_lora_bw_in_hz( mod_p->bw );
+    if( denominator == 0 )
+    {
+        return 0;
+    }
+    else
+    {
+        // Perform integral ceil()
+        return ( numerator + denominator - 1 ) / denominator;
+    }
 }
 
 uint32_t lr11xx_radio_get_gfsk_time_on_air_numerator( const lr11xx_radio_pkt_params_gfsk_t* pkt_p )
@@ -1292,6 +1342,60 @@ uint16_t lr11xx_radio_convert_nb_symb_to_mant_exp( const uint16_t nb_symbol, uin
     return mant_loc << ( 2 * exp_loc + 1 );
 }
 
+lr11xx_status_t lr11xx_radio_set_lna_mode( const void* context, lr11xx_radio_lna_mode_t lna_config )
+{
+    return lr11xx_regmem_write_regmem32_mask( context, 0x00F3008C, 0xF0, lna_config << 4 );
+}
+
+lr11xx_status_t lr11xx_workaround_gfsk_1_2_kbps( const void* context )
+{
+    lr11xx_status_t status = LR11XX_STATUS_ERROR;
+
+    if( ( status = lr11xx_regmem_write_regmem32_mask( context, LR11XX_REG_GFSK_WORKAROUND_1, 0x30, 0x10 ) ) !=
+        LR11XX_STATUS_OK )
+    {
+        return status;
+    }
+
+    if( ( status = lr11xx_regmem_write_regmem32_mask( context, LR11XX_REG_GFSK_WORKAROUND_2, 0x05, 0x04 ) ) !=
+        LR11XX_STATUS_OK )
+    {
+        return status;
+    }
+    return status;
+}
+
+lr11xx_status_t lr11xx_workaround_gfsk_0_6_kbps_sub_ghz( const void* context )
+{
+    return lr11xx_workaround_gfsk_0_6_kbps_base( context, 0x0600 );
+}
+
+lr11xx_status_t lr11xx_workaround_gfsk_0_6_kbps_ghz( const void* context )
+{
+    return lr11xx_workaround_gfsk_0_6_kbps_base( context, 0x1100 );
+}
+
+lr11xx_status_t lr11xx_workaround_gfsk_reset( const void* context )
+{
+    lr11xx_status_t status = LR11XX_STATUS_ERROR;
+    if( ( status = lr11xx_regmem_write_regmem32_mask( context, LR11XX_REG_GFSK_WORKAROUND_1, 0x30, 0x10 ) ) !=
+        LR11XX_STATUS_OK )
+    {
+        return status;
+    }
+    if( ( status = lr11xx_regmem_write_regmem32_mask( context, LR11XX_REG_GFSK_WORKAROUND_2, 0x05, 0x01 ) ) !=
+        LR11XX_STATUS_OK )
+    {
+        return status;
+    }
+    if( ( status = lr11xx_regmem_write_regmem32_mask( context, LR11XX_REG_GFSK_WORKAROUND_3, 0x01ff03, 0x0a01 ) ) !=
+        LR11XX_STATUS_OK )
+    {
+        return status;
+    }
+    return status;
+}
+
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE FUNCTIONS DEFINITION --------------------------------------------
@@ -1314,6 +1418,11 @@ static inline uint32_t lr11xx_radio_get_gfsk_crc_len_in_bytes( lr11xx_radio_gfsk
     }
 
     return 0;
+}
+
+lr11xx_status_t lr11xx_workaround_gfsk_0_6_kbps_base( const void* context, uint32_t value )
+{
+    return lr11xx_regmem_write_regmem32_mask( context, LR11XX_REG_GFSK_WORKAROUND_3, 0x01ff03, value );
 }
 
 /* --- EOF ------------------------------------------------------------------ */

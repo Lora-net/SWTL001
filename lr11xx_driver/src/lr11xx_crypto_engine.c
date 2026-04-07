@@ -52,11 +52,11 @@
 
 #define LR11XX_CRYPTO_FW_IMAGE_DATA_MAX_LENGTH_UINT32 ( 64 )
 #define LR11XX_CRYPTO_FW_IMAGE_DATA_MAX_LENGTH_UINT8 ( LR11XX_CRYPTO_FW_IMAGE_DATA_MAX_LENGTH_UINT32 * 4 )
+#define LR11XX_CRYPTO_MAX_JOIN_ACCEPT_DATA_SIZE ( 32 )
 
-#define LR11XX_CRYPTO_SELECT_CMD_LENGTH ( 2 + 1 )
 #define LR11XX_CRYPTO_SET_KEY_CMD_LENGTH ( 2 + 17 )
 #define LR11XX_CRYPTO_DERIVE_KEY_CMD_LENGTH ( 2 + 18 )
-#define LR11XX_CRYPTO_PROCESS_JOIN_ACCEPT_CMD_LENGTH ( 2 + 3 + 12 + 32 )
+#define LR11XX_CRYPTO_PROCESS_JOIN_ACCEPT_CMD_LENGTH ( 2 + 3 + 12 + LR11XX_CRYPTO_MAX_JOIN_ACCEPT_DATA_SIZE )
 #define LR11XX_CRYPTO_COMPUTE_AES_CMAC_CMD_LENGTH ( 2 + 1 + 272 )
 #define LR11XX_CRYPTO_VERIFY_AES_CMAC_CMD_LENGTH ( 2 + 1 + 4 + 256 )
 #define LR11XX_CRYPTO_AES_ENCRYPT_CMD_LENGTH ( 2 + 1 + 256 )
@@ -78,7 +78,6 @@
  */
 enum
 {
-    LR11XX_CRYPTO_SELECT_OC                              = 0x0500,
     LR11XX_CRYPTO_SET_KEY_OC                             = 0x0502,
     LR11XX_CRYPTO_DERIVE_KEY_OC                          = 0x0503,
     LR11XX_CRYPTO_PROCESS_JOIN_ACCEPT_OC                 = 0x0504,
@@ -133,18 +132,6 @@ static uint8_t lr11xx_crypto_get_min_from_operand_and_max_block_size( uint32_t o
  * -----------------------------------------------------------------------------
  * --- PUBLIC FUNCTIONS DEFINITION ---------------------------------------------
  */
-
-lr11xx_status_t lr11xx_crypto_select( const void* context, const lr11xx_crypto_element_t element )
-{
-    uint8_t cbuffer[LR11XX_CRYPTO_SELECT_CMD_LENGTH] = { 0x00 };
-
-    cbuffer[0] = ( uint8_t ) ( LR11XX_CRYPTO_SELECT_OC >> 8 );
-    cbuffer[1] = ( uint8_t ) ( LR11XX_CRYPTO_SELECT_OC >> 0 );
-
-    cbuffer[2] = element;
-
-    return ( lr11xx_status_t ) lr11xx_hal_write( context, cbuffer, LR11XX_CRYPTO_SELECT_CMD_LENGTH, 0, 0 );
-}
 
 lr11xx_status_t lr11xx_crypto_set_key( const void* context, lr11xx_crypto_status_t* status, const uint8_t key_id,
                                        const lr11xx_crypto_key_t key )
@@ -209,7 +196,24 @@ lr11xx_status_t lr11xx_crypto_process_join_accept( const void* context, lr11xx_c
 {
     uint8_t cbuffer[LR11XX_CRYPTO_PROCESS_JOIN_ACCEPT_CMD_LENGTH] = { 0x00 };
     uint8_t rbuffer[LR11XX_CRYPTO_STATUS_LENGTH + 32]             = { 0x00 };
-    uint8_t header_length                                         = ( lorawan_version == 0 ) ? 1 : 12;
+    uint8_t header_length;
+
+    switch( lorawan_version )
+    {
+    case LR11XX_CRYPTO_LORAWAN_VERSION_1_0_X:
+        header_length = 1;
+        break;
+    case LR11XX_CRYPTO_LORAWAN_VERSION_1_1_X:
+        header_length = 12;
+        break;
+    default:
+        return LR11XX_STATUS_ERROR;
+    }
+
+    if( length > LR11XX_CRYPTO_MAX_JOIN_ACCEPT_DATA_SIZE )
+    {
+        return LR11XX_STATUS_ERROR;
+    }
 
     cbuffer[0] = ( uint8_t ) ( LR11XX_CRYPTO_PROCESS_JOIN_ACCEPT_OC >> 8 );
     cbuffer[1] = ( uint8_t ) ( LR11XX_CRYPTO_PROCESS_JOIN_ACCEPT_OC >> 0 );
@@ -550,9 +554,16 @@ lr11xx_status_t lr11xx_crypto_get_check_encrypted_firmware_image_result( const v
         ( uint8_t ) ( LR11XX_CRYPTO_GET_CHECK_ENCRYPTED_FW_IMAGE_RESULT_OC >> 0 ),
     };
 
-    return ( lr11xx_status_t ) lr11xx_hal_read( context, cbuffer,
-                                                LR11XX_CRYPTO_GET_CHECK_ENCRYPTED_FW_IMAGE_RESULT_CMD_LENGTH,
-                                                ( uint8_t* ) is_encrypted_fw_image_ok, 1 );
+    uint8_t               is_encrypted_fw_image_ok_raw = 0;
+    const lr11xx_status_t status                       = ( lr11xx_status_t ) lr11xx_hal_read(
+                              context, cbuffer, LR11XX_CRYPTO_GET_CHECK_ENCRYPTED_FW_IMAGE_RESULT_CMD_LENGTH, &is_encrypted_fw_image_ok_raw,
+                              1 );
+
+    if( status == LR11XX_STATUS_OK )
+    {
+        *is_encrypted_fw_image_ok = ( bool ) is_encrypted_fw_image_ok_raw;
+    }
+    return status;
 }
 
 /*

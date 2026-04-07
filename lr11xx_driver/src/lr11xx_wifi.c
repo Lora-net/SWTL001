@@ -475,11 +475,8 @@ lr11xx_status_t lr11xx_wifi_read_country_code_results( const void* context, cons
             local_country_code_result->io_regulation     = rbuffer[local_index + 2];
             local_country_code_result->channel_info_byte = rbuffer[local_index + 3];
 
-            for( uint8_t field_mac_index = 0; field_mac_index < LR11XX_WIFI_MAC_ADDRESS_LENGTH; field_mac_index++ )
-            {
-                local_country_code_result->mac_address[field_mac_index] =
-                    rbuffer[local_index + ( LR11XX_WIFI_MAC_ADDRESS_LENGTH - field_mac_index - 1 ) + 4];
-            }
+            lr11xx_wifi_read_mac_address_from_buffer( rbuffer, local_index + 4,
+                                                      local_country_code_result->mac_address );
         }
     }
     return ( lr11xx_status_t ) hal_status;
@@ -567,13 +564,13 @@ uint32_t lr11xx_wifi_get_consumption_nah( lr11xx_system_reg_mode_t regulator, lr
                                 ( ( float ) timing.demodulation_us * LR11XX_WIFI_DEMODULATION_NA ) +
                                 ( ( float ) timing.rx_correlation_us * LR11XX_WIFI_CORRELATION_NA );
 
-    wifi_scan_consumption_nah = wifi_scan_consumption_nah /
-                                ( 3600000000.0 - ( ( float ) timing.rx_capture_us + ( float ) timing.demodulation_us +
+    wifi_scan_consumption_nah = (float) wifi_scan_consumption_nah /
+                                ( (float) 3600000000.0 - ( ( float ) timing.rx_capture_us + ( float ) timing.demodulation_us +
                                                    ( float ) timing.rx_correlation_us ) );
 
     if( regulator == LR11XX_SYSTEM_REG_MODE_LDO )
     {
-        wifi_scan_consumption_nah *= 2.0;
+        wifi_scan_consumption_nah *= (float) 2.0;
     }
 
     return ( uint32_t ) wifi_scan_consumption_nah;

@@ -46,9 +46,9 @@ extern "C" {
 
 #include "lr11xx_system_types.h"
 
-#ifndef DEMO_VERSION
-#warning "No demo version provided"
-#define DEMO_VERSION "v2.5.1"
+#ifndef UPDATER_TOOL_VERSION
+#warning "No version provided"
+#define UPDATER_TOOL_VERSION "v2.6.0"
 #endif
 
 /*

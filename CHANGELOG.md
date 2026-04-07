@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v2.6.0] - 2026-03-27
+
+### Added
+
+- Integrate bootloader updater
+- Firmware images:
+  - LR1110 bootloader updater `0x6500`
+  - LR1110 transceiver `0x0402`
+  - LR1120 bootloader updater `0x2000`
+  - LR1120 transceiver `0x0202`
+  - LR1121 bootloader updater `0x2100`
+  - LR1121 transceiver `0x0104`
+
+### Changed
+
+- Modem-E driver dependency updated to v2.0.0
+- LR11xx driver dependency updated to v3.0.0
+
 ## [v2.5.1] - 2024-09-23
 
 ### Changed

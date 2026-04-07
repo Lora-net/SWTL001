@@ -44,19 +44,17 @@
 
 static lv_obj_t* screen;
 static lv_obj_t* icon;
-static lv_obj_t* lbl_title;
-static lv_obj_t* lbl_version;
-static lv_obj_t* preload;
 static lv_obj_t* lbl_status;
 
 static lv_style_t screen_style;
 static lv_style_t title_style;
-static lv_style_t preloader_style;
 
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE MACROS-----------------------------------------------------------
  */
+
+#define INIT_BUFFER_SIZE ( 100 )
 
 /*
  * -----------------------------------------------------------------------------
@@ -83,9 +81,9 @@ static lv_style_t preloader_style;
  * --- PUBLIC FUNCTIONS DEFINITION ---------------------------------------------
  */
 
-void gui_init( lr11xx_fw_update_t update, uint32_t fw_expected )
+void gui_init( lr11xx_fw_update_t update, uint32_t fw_expected, bool has_bootloader )
 {
-    char buffer[30] = { 0 };
+    char buffer[INIT_BUFFER_SIZE] = { 0 };
 
     lv_style_copy( &( screen_style ), &lv_style_scr );
     screen_style.body.main_color = LV_COLOR_BLACK;
@@ -105,7 +103,7 @@ void gui_init( lr11xx_fw_update_t update, uint32_t fw_expected )
     lv_obj_align( icon, NULL, LV_ALIGN_IN_TOP_LEFT, 17, 0 );
     lv_img_set_src( icon, &semtech_logo );
 
-    sprintf( buffer, "LR11XX\nUPDATER TOOL\n%s", DEMO_VERSION );
+    snprintf( buffer, INIT_BUFFER_SIZE, "LR11XX\nUPDATER TOOL\n%s", UPDATER_TOOL_VERSION );
 
     lv_obj_t* lbl_title = lv_label_create( screen, NULL );
     lv_obj_set_style( lbl_title, &( title_style ) );
@@ -119,31 +117,43 @@ void gui_init( lr11xx_fw_update_t update, uint32_t fw_expected )
     {
     case LR1110_FIRMWARE_UPDATE_TO_TRX:
     {
-        sprintf( buffer, "Update LR1110 to FW 0x%04x", fw_expected );
+        snprintf( buffer, INIT_BUFFER_SIZE, "Update LR1110 to FW 0x%04lx%s", fw_expected,
+                  has_bootloader ? "\nWith bootloader" : "" );
         break;
     }
     case LR1110_FIRMWARE_UPDATE_TO_MODEM_V1:
     {
-        sprintf( buffer, "Update Modem-E to FW 0x%06x", fw_expected );
+        snprintf( buffer, INIT_BUFFER_SIZE, "Update Modem-E to FW 0x%06lx%s", fw_expected,
+                  has_bootloader ? "\nWith bootloader" : "" );
         break;
     }
     case LR1120_FIRMWARE_UPDATE_TO_TRX:
     {
-        sprintf( buffer, "Update LR1120 to FW 0x%04x", fw_expected );
+        snprintf( buffer, INIT_BUFFER_SIZE, "Update LR1120 to FW 0x%04lx%s", fw_expected,
+                  has_bootloader ? "\nWith bootloader" : "" );
         break;
     }
     case LR1121_FIRMWARE_UPDATE_TO_TRX:
     {
-        sprintf( buffer, "Update LR1121 to FW 0x%04x", fw_expected );
+        snprintf( buffer, INIT_BUFFER_SIZE, "Update LR1121 to FW 0x%04lx%s", fw_expected,
+                  has_bootloader ? "\nWith bootloader" : "" );
         break;
     }
     case LR1121_FIRMWARE_UPDATE_TO_MODEM_V2:
     {
-        sprintf( buffer, "Update Modem-E to FW 0x%06x", fw_expected );
+        snprintf( buffer, INIT_BUFFER_SIZE, "Update Modem-E to FW 0x%06lx%s", fw_expected,
+                  has_bootloader ? "\nWith bootloader" : "" );
+        break;
+    }
+    case LR1110_FIRMWARE_UPDATE_TO_BL_LOADER:
+    case LR1120_FIRMWARE_UPDATE_TO_BL_LOADER:
+    case LR1121_FIRMWARE_UPDATE_TO_BL_LOADER:
+    {
+        snprintf( buffer, INIT_BUFFER_SIZE, "Direct update to bootloader loader should not be attempted.\n" );
         break;
     }
     default:
-    break;
+        break;
     }
 
     lv_obj_t* lbl_fw = lv_label_create( screen, NULL );

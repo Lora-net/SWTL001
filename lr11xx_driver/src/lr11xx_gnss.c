@@ -239,6 +239,8 @@ static uint16_t lr11xx_gnss_get_min_from_operand_and_max_nb_of_blocks( uint16_t 
  */
 static lr11xx_status_t lr11xx_gnss_get_almanac_address_size( const void* context, uint32_t* address, uint16_t* size );
 
+static void lr11xx_gnss_uint32_to_uint8_array( uint32_t value, uint8_t array[4], bool is_lsb_first );
+
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC FUNCTIONS DEFINITION ---------------------------------------------
@@ -361,16 +363,33 @@ lr11xx_status_t lr11xx_gnss_get_almanac_age_for_satellite( const void* context, 
         return status_get_almanac_address_size;
     }
 
-    const uint16_t offset_almanac_date                               = sv_id * LR11XX_GNSS_SINGLE_ALMANAC_READ_SIZE + 1;
-    uint8_t        raw_almanac_date[LR11XX_GNSS_ALMANAC_DATE_LENGTH] = { 0 };
+    const uint16_t offset_almanac_date = sv_id * LR11XX_GNSS_SINGLE_ALMANAC_READ_SIZE + 1u;
 
-    const lr11xx_status_t status_read_mem = lr11xx_regmem_read_mem8(
-        context, almanac_base_address + offset_almanac_date, raw_almanac_date, LR11XX_GNSS_ALMANAC_DATE_LENGTH );
+    const uint32_t almanac_date_unaligned_base_address = almanac_base_address + offset_almanac_date;
+
+    // Get the first 4-byte aligned address to read
+    const uint32_t almanac_date_aligned_base_address = ( almanac_date_unaligned_base_address / 4 ) * 4;
+
+    // Offset of first almanac age byte from word aligned read
+    const uint32_t offset_almanac_age_from_4_byte_aligned =
+        almanac_date_unaligned_base_address % almanac_date_aligned_base_address;
+
+    // Determine if there should be 1 or 2 words to read
+    const uint8_t n_words_read = ( offset_almanac_age_from_4_byte_aligned >= 3 ) ? 2 : 1;
+
+    // Raw array containing up to 8 bytes read from the chip from 4-byte memory aligned
+    uint8_t  raw_almanac_date[8]      = { 0 };
+    uint32_t raw_word_almanac_date[2] = { 0 };
+
+    const lr11xx_status_t status_read_mem =
+        lr11xx_regmem_read_regmem32( context, almanac_date_aligned_base_address, raw_word_almanac_date, n_words_read );
     if( status_read_mem == LR11XX_STATUS_OK )
     {
-        // Note: the memory on LR11XX is LSB first. As the 2-byte wide almanac age is obtained by calling the _mem8, the
-        // conversion to uint16_t here is done LSB first
-        ( *almanac_age ) = ( ( ( uint16_t ) raw_almanac_date[1] ) << 8 ) + ( ( ( uint16_t ) raw_almanac_date[0] ) );
+        lr11xx_gnss_uint32_to_uint8_array( raw_word_almanac_date[0], raw_almanac_date, true );
+        lr11xx_gnss_uint32_to_uint8_array( raw_word_almanac_date[1], raw_almanac_date + 4, true );
+
+        ( *almanac_age ) = ( ( ( uint16_t ) raw_almanac_date[offset_almanac_age_from_4_byte_aligned + 1] ) << 8u ) +
+                           ( ( ( uint16_t ) raw_almanac_date[offset_almanac_age_from_4_byte_aligned] ) );
     }
     return status_read_mem;
 }
@@ -474,8 +493,14 @@ lr11xx_status_t lr11xx_gnss_read_freq_search_space( const void*                 
         ( uint8_t )( LR11XX_GNSS_READ_FREQ_SEARCH_SPACE_OC >> 0 ),
     };
 
-    return ( lr11xx_status_t ) lr11xx_hal_read( radio, cbuffer, LR11XX_GNSS_READ_FREQ_SEARCH_SPACE_CMD_LENGTH,
-                                                ( uint8_t* ) freq_search_space, sizeof( uint8_t ) );
+    uint8_t               freq_search_space_raw = 0;
+    const lr11xx_status_t status                = ( lr11xx_status_t ) lr11xx_hal_read(
+                       radio, cbuffer, LR11XX_GNSS_READ_FREQ_SEARCH_SPACE_CMD_LENGTH, &freq_search_space_raw, 1 );
+    if( status == LR11XX_STATUS_OK )
+    {
+        *freq_search_space = ( lr11xx_gnss_freq_search_space_t ) freq_search_space_raw;
+    }
+    return status;
 }
 
 lr11xx_status_t lr11xx_gnss_read_firmware_version( const void* context, lr11xx_gnss_version_t* version )
@@ -970,37 +995,37 @@ void lr11xx_gnss_compute_power_consumption(
     uint32_t* power_consumption_nah, uint32_t* power_consumption_nwh )
 {
     float e_init =
-        ( ( float ) instantaneous_power_consumption_ua->init_ua / 1000.0 * ( float ) cumulative_timing->init ) /
-        32768.0;
+        ( ( float ) instantaneous_power_consumption_ua->init_ua / 1000.0f * ( float ) cumulative_timing->init ) /
+        32768.0f;
 
-    float e_gps_capture = ( ( ( float ) instantaneous_power_consumption_ua->phase1_gps_capture_ua / 1000.0 *
+    float e_gps_capture = ( ( ( float ) instantaneous_power_consumption_ua->phase1_gps_capture_ua / 1000.0f *
                               ( float ) cumulative_timing->phase1_gps_capture ) +
-                            ( ( float ) instantaneous_power_consumption_ua->multiscan_gps_capture_ua / 1000.0 *
+                            ( ( float ) instantaneous_power_consumption_ua->multiscan_gps_capture_ua / 1000.0f *
                               ( float ) cumulative_timing->multiscan_gps_capture ) ) /
-                          32768.0;
+                          32768.0f;
 
-    float e_gps_process = ( ( ( float ) instantaneous_power_consumption_ua->phase1_gps_process_ua / 1000.0 *
+    float e_gps_process = ( ( ( float ) instantaneous_power_consumption_ua->phase1_gps_process_ua / 1000.0f *
                               ( float ) cumulative_timing->phase1_gps_process ) +
-                            ( ( float ) instantaneous_power_consumption_ua->multiscan_gps_process_ua / 1000.0 *
+                            ( ( float ) instantaneous_power_consumption_ua->multiscan_gps_process_ua / 1000.0f *
                               ( float ) cumulative_timing->multiscan_gps_process ) ) /
-                          32768.0;
+                          32768.0f;
 
-    float e_gps_sleep_32k = ( ( float ) instantaneous_power_consumption_ua->sleep_32k_ua / 1000.0 *
+    float e_gps_sleep_32k = ( ( float ) instantaneous_power_consumption_ua->sleep_32k_ua / 1000.0f *
                               ( float ) cumulative_timing->multiscan_gps_sleep_32k ) /
-                            32768.0;
+                            32768.0f;
 
     float e_tot_gps = e_gps_capture + e_gps_process + e_gps_sleep_32k;
 
-    float e_beidou_capture = ( ( ( float ) instantaneous_power_consumption_ua->phase1_beidou_capture_ua / 1000.0 *
+    float e_beidou_capture = ( ( ( float ) instantaneous_power_consumption_ua->phase1_beidou_capture_ua / 1000.0f *
                                  ( float ) cumulative_timing->phase1_beidou_capture ) +
-                               ( ( float ) instantaneous_power_consumption_ua->multiscan_beidou_capture_ua / 1000.0 *
+                               ( ( float ) instantaneous_power_consumption_ua->multiscan_beidou_capture_ua / 1000.0f *
                                  ( float ) cumulative_timing->multiscan_beidou_capture ) ) /
-                             32768.0;
-    float e_beidou_process = ( ( ( float ) instantaneous_power_consumption_ua->phase1_beidou_process_ua / 1000.0 *
+                             32768.0f;
+    float e_beidou_process = ( ( ( float ) instantaneous_power_consumption_ua->phase1_beidou_process_ua / 1000.0f *
                                  ( float ) cumulative_timing->phase1_beidou_process ) +
-                               ( ( float ) instantaneous_power_consumption_ua->multiscan_beidou_process_ua / 1000.0 *
+                               ( ( float ) instantaneous_power_consumption_ua->multiscan_beidou_process_ua / 1000.0f *
                                  ( float ) cumulative_timing->multiscan_beidou_process ) ) /
-                             32768.0;
+                             32768.0f;
     float e_beidou_sleep_32k =
         ( instantaneous_power_consumption_ua->sleep_32k_ua / 1000.0 * cumulative_timing->multiscan_beidou_sleep_32k ) /
         32768.0;
@@ -1010,31 +1035,31 @@ void lr11xx_gnss_compute_power_consumption(
     float e_demod = 0;
     if( cumulative_timing->constellation_demod == 0 )  // Demodulation has been done on GPS constellation
     {
-        e_demod = ( ( ( float ) instantaneous_power_consumption_ua->multiscan_gps_capture_ua / 1000.0 *
+        e_demod = ( ( ( float ) instantaneous_power_consumption_ua->multiscan_gps_capture_ua / 1000.0f *
                       ( float ) cumulative_timing->demod_capture ) +
-                    ( ( float ) instantaneous_power_consumption_ua->multiscan_gps_process_ua / 1000.0 *
+                    ( ( float ) instantaneous_power_consumption_ua->multiscan_gps_process_ua / 1000.0f *
                       ( float ) cumulative_timing->demod_process ) +
-                    ( ( float ) instantaneous_power_consumption_ua->sleep_32k_ua / 1000.0 *
+                    ( ( float ) instantaneous_power_consumption_ua->sleep_32k_ua / 1000.0f *
                       ( float ) cumulative_timing->demod_sleep_32k ) +
-                    ( ( float ) instantaneous_power_consumption_ua->demod_sleep_32m_ua / 1000.0 *
+                    ( ( float ) instantaneous_power_consumption_ua->demod_sleep_32m_ua / 1000.0f *
                       ( float ) cumulative_timing->demod_sleep_32m ) ) /
-                  32768.0;
+                  32768.0f;
     }
     else  // Domulation has been done on Beidou constellation
     {
-        e_demod = ( ( ( float ) instantaneous_power_consumption_ua->multiscan_beidou_capture_ua / 1000.0 *
+        e_demod = ( ( ( float ) instantaneous_power_consumption_ua->multiscan_beidou_capture_ua / 1000.0f *
                       ( float ) cumulative_timing->demod_capture ) +
-                    ( ( float ) instantaneous_power_consumption_ua->multiscan_beidou_process_ua / 1000.0 *
+                    ( ( float ) instantaneous_power_consumption_ua->multiscan_beidou_process_ua / 1000.0f *
                       ( float ) cumulative_timing->demod_process ) +
-                    ( ( float ) instantaneous_power_consumption_ua->sleep_32k_ua / 1000.0 *
+                    ( ( float ) instantaneous_power_consumption_ua->sleep_32k_ua / 1000.0f *
                       ( float ) cumulative_timing->demod_sleep_32k ) +
-                    ( ( float ) instantaneous_power_consumption_ua->demod_sleep_32m_ua / 1000.0 *
+                    ( ( float ) instantaneous_power_consumption_ua->demod_sleep_32m_ua / 1000.0f *
                       ( float ) cumulative_timing->demod_sleep_32m ) ) /
-                  32768.0;
+                  32768.0f;
     }
 
     float power_consumption_uah_tmp = ( ( e_init + e_tot_gps + e_tot_beidou + e_demod ) * 1000 ) /
-                                      ( 3600.0 - ( ( float ) cumulative_timing->total / 32768.0 ) );
+                                      ( 3600.0f - ( ( float ) cumulative_timing->total / 32768.0f ) );
 
     *power_consumption_nah = ( uint32_t )( power_consumption_uah_tmp * 1000 );
     *power_consumption_nwh =
@@ -1322,6 +1347,24 @@ uint32_t lr11xx_gnss_uint8_to_uint32( uint8_t value[4] )
 {
     return ( ( ( uint32_t ) value[0] ) << 24 ) + ( ( ( uint32_t ) value[1] ) << 16 ) +
            ( ( ( uint32_t ) value[2] ) << 8 ) + ( ( ( uint32_t ) value[3] ) );
+}
+
+void lr11xx_gnss_uint32_to_uint8_array( uint32_t value, uint8_t array[4], bool is_lsb_first )
+{
+    if( is_lsb_first )
+    {
+        array[3] = ( uint8_t ) ( value >> 24 );
+        array[2] = ( uint8_t ) ( value >> 16 );
+        array[1] = ( uint8_t ) ( value >> 8 );
+        array[0] = ( uint8_t ) value;
+    }
+    else
+    {
+        array[0] = ( uint8_t ) ( value >> 24 );
+        array[1] = ( uint8_t ) ( value >> 16 );
+        array[2] = ( uint8_t ) ( value >> 8 );
+        array[3] = ( uint8_t ) value;
+    }
 }
 
 uint16_t lr11xx_gnss_get_min_from_operand_and_max_nb_of_blocks( uint16_t operand )

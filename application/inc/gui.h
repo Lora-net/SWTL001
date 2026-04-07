@@ -71,8 +71,9 @@ extern "C" {
  *
  * @param [in] update Chip type to be updated
  * @param [in] fw_expected Expected LR11xx firmware version
+ * @param [in] has_bootloader Flag to indicate if the update includes bootloader update
  */
-void gui_init( lr11xx_fw_update_t update, uint32_t fw_expected );
+void gui_init( lr11xx_fw_update_t update, uint32_t fw_expected, bool has_bootloader );
 
 /*!
  * @brief Update the GUI
