@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v2.7.0] - 2026-10-05
+
+### Added
+
+- Firmware images:
+  - LR1110 transceiver `0x0403`
+  - LR1110 transceiver `0xA10303`
+  - LR1110 modem `2.1.1`
+  - LR1120 transceiver `0xA20101`
+  - LR1120 transceiver `0x0203`
+  - LR1121 transceiver `0xA30101`
+  - LR1121 transceiver `0x0105`
+  - LR1121 modem `2.1.1`
+
+## [v2.6.1] - 2026-06-30
+
+### Fix
+
+- Rename the destination update name `LR1110_FIRMWARE_UPDATE_TO_MODEM_V2`
+
 ## [v2.6.0] - 2026-03-27
 
 ### Added

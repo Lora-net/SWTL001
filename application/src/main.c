@@ -134,7 +134,7 @@ int main( void )
         printf( "Update LR1121 to transceiver firmware 0x%04x\n", LR11XX_FIRMWARE_VERSION );
         break;
     }
-    case LR1110_FIRMWARE_UPDATE_TO_MODEM_V1:
+    case LR1110_FIRMWARE_UPDATE_TO_MODEM_V2:
     {
         printf( "Update LR1110 to modem firmware 0x%06x\n", LR11XX_FIRMWARE_VERSION );
         break;

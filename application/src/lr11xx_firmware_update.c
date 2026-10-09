@@ -171,7 +171,8 @@ lr11xx_fw_update_status_t lr11xx_update_post_flash_reboot_and_verification( void
 
         lr11xx_system_read_uid( radio, uid );
 
-        if( version_trx.fw == fw_expected )
+        // Version comparison is on 16 LSBits for transceiver
+        if( version_trx.fw == ( (uint16_t) fw_expected ) )
         {
             return LR11XX_FW_UPDATE_OK;
         }
@@ -181,7 +182,7 @@ lr11xx_fw_update_status_t lr11xx_update_post_flash_reboot_and_verification( void
         }
         break;
     }
-    case LR1110_FIRMWARE_UPDATE_TO_MODEM_V1:
+    case LR1110_FIRMWARE_UPDATE_TO_MODEM_V2:
     case LR1121_FIRMWARE_UPDATE_TO_MODEM_V2:
     {
         modem_e_version_t version_modem = { 0 };

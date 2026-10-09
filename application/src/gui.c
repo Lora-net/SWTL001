@@ -121,7 +121,7 @@ void gui_init( lr11xx_fw_update_t update, uint32_t fw_expected, bool has_bootloa
                   has_bootloader ? "\nWith bootloader" : "" );
         break;
     }
-    case LR1110_FIRMWARE_UPDATE_TO_MODEM_V1:
+    case LR1110_FIRMWARE_UPDATE_TO_MODEM_V2:
     {
         snprintf( buffer, INIT_BUFFER_SIZE, "Update Modem-E to FW 0x%06lx%s", fw_expected,
                   has_bootloader ? "\nWith bootloader" : "" );
